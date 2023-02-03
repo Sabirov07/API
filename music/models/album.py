@@ -6,6 +6,7 @@ class Album(models.Model):
     artist = models.ForeignKey(Artist, on_delete=models.CASCADE)
     created_date = models.DateField(auto_now_add=True)
 
+
     def __str__(self):
         return self.name
 

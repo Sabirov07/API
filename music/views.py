@@ -1,7 +1,12 @@
+from django.contrib.postgres.search import TrigramSimilarity
 from django.shortcuts import render
-from rest_framework import views
+from rest_framework import views, permissions, filters
+from rest_framework.authentication import TokenAuthentication
+from rest_framework.decorators import action
 from rest_framework.response import Response
 from rest_framework import status
+from rest_framework.viewsets import ModelViewSet
+from django.db import transaction
 
 from .models.artist import Artist
 from .serializer import ArtistSerializer
@@ -12,44 +17,48 @@ from .serializer import AlbumSerializer
 from .models.song import Song
 from .serializer import SongSerializer
 
-class ArtistApiView(views.APIView):
+class ArtistAPIViewSet(ModelViewSet):
+    queryset = Artist.objects.all()
+    serializer_class = ArtistSerializer
 
-    def get(self, request):
-        artists = Artist.objects.all()
-        serializer = ArtistSerializer(artists, many=True)
+    @action(detail=True, methods=['GET'])
+    def albums(self, request, *args, **kwargs):
+        artist = self.get_object()
+        serializer = AlbumSerializer(artist.album_set.all(), many=True)
+        return Response(serializer.data)
+    @action(detail=True, methods=['GET'])
+    def songs(self, request, *args, **kwargs):
+        artist = self.get_object()
+        serializer = SongSerializer(artist.song_set.all(), many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer = ArtistSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-
-        return Response(serializer.errors,  status=status.HTTP_400_BAD_REQUEST)
-
-class AlbumApiView(views.APIView):
-
-    def get(self, request):
-        album = Album.objects.all()
-        serializer = AlbumSerializer(album, many=True)
+class AlbumAPIViewSet(ModelViewSet):
+    queryset = Album.objects.all()
+    serializer_class = AlbumSerializer
+    @action(detail=True, methods=['GET'])
+    def songs(self, request, *args, **kwargs):
+        album =self.get_object()
+        serializer =SongSerializer(album.song_set.all(), many=True)
         return Response(serializer.data)
 
-    def post(self, request):
-        serializer =AlbumSerializer(data=request.data)
-
-        if serializer.is_valid():
-            serializer.save()
-            return Response(serializer.data, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
 
-class SongApiView(views.APIView):
-    def get(self, request):
-        song = Song.objects.all()
-        serializer = SongSerializer(song, many=True)
-        return Response(serializer.data)
+#CRUD -> Create-Update-Retrieve-Delete
+class SongApiViewSet(ModelViewSet):
+    queryset =Song.objects.all()
+    serializer_class =SongSerializer
+    permission_classes = [permissions.AllowAny]
+    # filter_backends = [filters.SearchFilter]
+    # search_fields = ["title"]
 
+    def get_queryset(self):
+        queryset = Song.objects.all()
+        query = self.request.query_params.get('search')
+        if query is not None:
+            queryset = Song.objects.annotate(similarity=TrigramSimilarity('title', query)).filter(similarity__gt=0.2)
+        return queryset
+
+# postgresql -> TrigramSimilarity
 
 

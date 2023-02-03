@@ -8,6 +8,7 @@ ALLOWED_HOSTS = []
 MY_LIBS = [
     'rest_framework',
     # 'debug_toolbar',
+    'drf_yasg'
 ]
 
 MY_APPS = [
@@ -60,8 +61,12 @@ WSGI_APPLICATION = 'spotify.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': 'music',
+        'USER': 'postgres',
+        'PASSWORD': 'admin',
+        'HOST': '127.0.0.1',
+        'PORT': '5432',
     }
 }
 
